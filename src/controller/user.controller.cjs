@@ -9,6 +9,6 @@ exports.registration = async ( request, response ) => {
         let responsePayload = await insertOne(body)
         return response.send(successFormat(responsePayload, "Registration", code = StatusCodes.OK, message = "Registration Successfull")) 
     } catch (error) {
-        return response.send(errorMsgFormat(error.message, "registration",StatusCodes.BAD_REQUEST))
+        return response.send(errorMsgFormat(error.message, "Registration",StatusCodes.BAD_REQUEST))
     }
 }

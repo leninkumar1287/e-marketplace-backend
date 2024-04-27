@@ -1,7 +1,7 @@
-const { registration } = require('../controller/user.controller.cjs')
+const userValidationMiddleware = require('../middleware/userValidationMiddleware.cjs')
 
 const router = require('express').Router()
 
-router.post('/registration',registration)
+router.post('/registration',userValidationMiddleware.signup)
 
 module.exports = router
