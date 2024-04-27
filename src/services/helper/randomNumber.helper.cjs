@@ -3,7 +3,7 @@ exports.getRandomNumber = () => {
     const randomNumber = Math.random();
   
     // Scale the random number to be between 3 and 5
-    const scaledNumber = randomNumber * (5 - 3) + 3;
+    const scaledNumber = randomNumber * (6 - 4) + 4;
   
     // Round the number to the nearest integer
     const roundedNumber = Math.round(scaledNumber);
