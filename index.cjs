@@ -4,32 +4,41 @@ const { connectDb } = require('./src/services/connectDB.service.cjs');
 const { server } = require('./src/services/config.service.cjs');
 const { successFormat } = require('./src/services/utils/messageFormatter.cjs');
 const { StatusCodes } = require('http-status-codes');
+const router = require('./src/routes/index.cjs');
+
 const application = express()
-application.listen(1234)
 
 try {
+    //Invoking the DB Connection
     connectDb()
-    .then((response) => {
-        if(response == 1) {
-        console.log(
-            "*************************************************************************************** \
+        .then((response) => {
+            if (response == 1) {
+                console.log(
+                    "*************************************************************************************** \
             \nDB connection Status : ",
-            successFormat(
-                response,"DB Connection",
-                StatusCodes.ACCEPTED,
-                "DB Connected Successfully"))
-        application.listen(server.portNumber, () => console.log(
-            "*************************************************************************************** \
+                    successFormat(
+                        response, "DB Connection",
+                        StatusCodes.ACCEPTED,
+                        "DB Connected Successfully"))
+                //Running Express Server
+                application.listen(server.portNumber, () => console.log(
+                    "*************************************************************************************** \
             \nServer connection Status : ",
-            successFormat(
-                {PortNumber : server.portNumber},
-                "Server Connection",
-                StatusCodes.ACCEPTED,
-                "Server Connected Successfully")
+                    successFormat(
+                        { PortNumber: server.portNumber },
+                        "Server Connection",
+                        StatusCodes.ACCEPTED,
+                        "Server Connected Successfully")
                 ))
             }
-    })
-    .catch(console.dir);
+        })
+        .catch(console.dir);
 } catch (error) {
     console.log("Error : ", error.message)
 }
+
+
+// Endpoint Router
+application.use('/api/v1/e-marketplace',(err,req, res, next) => {
+    next()
+}, router)
