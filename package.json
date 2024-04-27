@@ -1,8 +1,9 @@
 {
   "name": "e-marketplace-backend",
   "version": "1.0.0",
+  "type": "module",
   "description": "",
-  "main": "index.js",
+  "main": "index.cjs",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -15,5 +16,14 @@
   "bugs": {
     "url": "https://github.com/leninkumar1287/e-marketplace-backend/issues"
   },
-  "homepage": "https://github.com/leninkumar1287/e-marketplace-backend#readme"
+  "homepage": "https://github.com/leninkumar1287/e-marketplace-backend#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.5.0",
+    "mongoose": "^8.3.2",
+    "nodemon": "^3.1.0"
+  }
 }
