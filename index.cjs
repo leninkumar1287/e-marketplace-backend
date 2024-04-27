@@ -7,7 +7,7 @@ const { StatusCodes } = require('http-status-codes');
 const router = require('./src/routes/index.cjs');
 
 const application = express()
-
+application.use(express.json())
 try {
     //Invoking the DB Connection
     connectDb()
