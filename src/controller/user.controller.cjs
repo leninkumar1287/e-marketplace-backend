@@ -1,57 +1,75 @@
 const UserModel = require('../model/userModel.cjs');
-const { insertOne, deleteOne, updateOne, findOne, insertMany, findOneUsingQuery } = require('../services/mongodb.service.cjs');
 const { successFormat, errorMsgFormat } = require('../services/utils/messageFormatter.cjs');
 const { StatusCodes } = require('http-status-codes');
 const bcrypt = require('bcrypt')
 const jsonwebtoken = require('jsonwebtoken');
-const { jwt, addBlackListedToken, checkTokenIsBlacListed } = require('../services/config.service.cjs');
-const { checkTokenExpiry } = require('../services/helper/jwtCheckTokenExpiry.helper.cjs');
+// const { jwt, addBlackListedToken, checkTokenIsBlacListed } = require('../services/config.service.cjs');
+// const { checkTokenExpiry } = require('../services/helper/jwtCheckTokenExpiry.helper.cjs');
 
-exports.registration = async (request, response) => {
+exports.registration = async (req, res) => {
     try {
-        let body = request.body;
-        const { password } = body;
-        const hashedPassword = await bcrypt.hash(password, 10)
-        body.password = hashedPassword;
-        //Check the Data Exists or Not
-        let insertStatus = await insertOne(body)
-        if (insertStatus.isExists != false) 
-        return response
-        .status(StatusCodes.CREATED)
-        .send(successFormat(insertStatus.result, 'Registration',StatusCodes.CREATED,'Inserted document into the collection'))
-        else return response
-        .status(StatusCodes.CONFLICT)
-        .send(errorMsgFormat({message : `${insertStatus.duplicateField} already exists` }, 'Registration',StatusCodes.CONFLICT))
+        let request = req.body
+        //check the user is exit or not 
+        let checkUserIsExistBymail = await UserModel.findOne({ userEmail: request.userEmail })
+        let checkUserIsExistUserName = await UserModel.findOne({ userName: request.userName })
+        
+        if (checkUserIsExistUserName) {
+            if (checkUserIsExistUserName.userName === request.userName) {
+                throw new Error('User Name already taken by someone, try with another User Name')
+            }
+        }
+        if (checkUserIsExistBymail) {
+            if (checkUserIsExistBymail.userEmail === request.userEmail) {
+                throw new Error('EmailId already registered, try with another email')
+            }
+        }
+        else {
+            //encrypt the password 
+            let encryptPassword = await new bcrypt.hash(request.password, 10)
+            //insert the data in DB
+            request.password = encryptPassword;
+            await UserModel(request).save()
+            // destruct data for response
+            let responsePayload = {
+                Name: request.userName,
+                Email: request.userEmail
+            }
+            return res.status(StatusCodes.CREATED).send(successFormat(responsePayload, 'signup', StatusCodes.CREATED, 'registration successfully completed'))
+        }
     } catch (error) {
-        return response
-        .status(StatusCodes.BAD_REQUEST)
-        .send(errorMsgFormat({message : error.message}, "Registration", StatusCodes.BAD_REQUEST))
+        return res.status(StatusCodes.BAD_REQUEST).send(errorMsgFormat(error.message, 'signup', StatusCodes.BAD_REQUEST))
     }
 }
 
 exports.signin = async (req, res) => {
     try {
-        let body = req.body
-        let checkEmailIsRegistered = await findOneUsingQuery({ userEmail: body.emailId })
+        let request = req.body
+        let checkEmailIsRegistered = await userModel.findOne({ emailId: request.emailId })
         if (checkEmailIsRegistered) {
-            let Decrypt = await new bcrypt.compare(body.password, checkEmailIsRegistered.password)
+            //Decrypt the password 
+            let Decrypt = await new bcrypt.compare(request.password, checkEmailIsRegistered.password)
             if (Decrypt) {
                 let tokenPayload = {
                     id: checkEmailIsRegistered.id,
-                    emailId: checkEmailIsRegistered.userEmail
+                    emailId: checkEmailIsRegistered.emailId
                 }
-                const jwtToken = jsonwebtoken.sign(tokenPayload, jwt.jwtSecretKey, { expiresIn: '30s' });
+                let jwtToken = await jsonwebtoken.sign(tokenPayload, "secret")
+
                 let responsePayload = {
-                    userId: checkEmailIsRegistered._id,
+                    userId: checkEmailIsRegistered.id,
                     tokenId: jwtToken
                 }
-                return res
-                .status(StatusCodes.OK)
-                .send(successFormat(
+                //If Token exists, Delete the previous one, and lets create a new one
+                let checkTokenExists = await jwtTokenModel.findOne({ userId: checkEmailIsRegistered._id })
+                if (checkTokenExists)
+                    await jwtTokenModel.findOneAndUpdate({ userId: checkEmailIsRegistered.id, tokenId: responsePayload.tokenId })
+                else
+                    await jwtTokenModel(responsePayload).save()
+                return res.status(StatusCodes.OK).send(successFormat(
                     responsePayload,
                     'login',
                     StatusCodes.OK,
-                    `logged in successfully, Welcome ${checkEmailIsRegistered.userName}`))
+                    `logged in successfully, Welcome ${checkEmailIsRegistered.firstName} ${checkEmailIsRegistered.lastName}`))
             }
             else throw new Error('credential not matched')
         }
@@ -64,16 +82,34 @@ exports.signin = async (req, res) => {
 
 exports.signout = async (req, res) => {
     try {
-        const { token } = req.headers
-        if (!checkTokenIsBlacListed(token)) {
-            let isTokenExpired = checkTokenExpiry(token)
-            if (isTokenExpired) return res.send(errorMsgFormat("Token already expired", "signout", StatusCodes.BAD_REQUEST))
-            else addBlackListedToken(token)
-            return res.send(successFormat({ tokenStatus: "Not expired" }, "signout", StatusCodes.OK, "You have Successfully Logged Out From This Site"))
+        //Delete the  Jwt token for log out
+        let logout = await jwtTokenModel.deleteMany({ tokenId: req.headers.authtoken })
+        if (logout.deletedCount > 0)
+            return res.status(StatusCodes.OK).send(successFormat('logged out successfully', 'signout', StatusCodes.OK, " Bubye "))
+        else {
+            return res.status(StatusCodes.INTERNAL_SERVER_ERROR).send(successFormat('No user logged in this id', 'logout', StatusCodes.INTERNAL_SERVER_ERROR, " No Data Found "))
         }
-        return res.send(errorMsgFormat("Invalid Token", "signout", StatusCodes.BAD_REQUEST))
     }
     catch (error) {
         return res.status(StatusCodes.BAD_REQUEST).send(errorMsgFormat(error.message, 'signout', StatusCodes.BAD_REQUEST))
+    }
+}
+
+exports.dashboard = async (req, res) => {
+    try {
+        let loggedUserDetails = await jwtVerify.verify(req, 'secret')
+        let getSignedUser = await userModel.findById({ _id: loggedUserDetails.id })
+        if (!getSignedUser)
+            throw new Error(' token Not Found')
+        let responsePayload = {
+            name: getSignedUser.firstName + " " + getSignedUser.lastName,
+            EmailId: getSignedUser.emailId,
+            profilePhoto: {
+                fileUrl: getSignedUser.profilePhoto.filePath
+            }
+        }
+        return res.status(StatusCodes.OK).send(successFormat(responsePayload, 'dashboard', StatusCodes.OK, "Welcome "))
+    } catch (error) {
+        return res.status(StatusCodes.BAD_REQUEST).send(errorMsgFormat(error.message, 'dashboard', StatusCodes.BAD_REQUEST))
     }
 }

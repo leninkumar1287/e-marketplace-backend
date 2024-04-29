@@ -36,6 +36,7 @@ exports.signup = (req) => {
         password: Joi.string().alphanum().min(8).max(15).required().messages(messages.password),
         confirmPassword: Joi.any().valid(Joi.ref('password')).required().messages(messages.confirmPassword),
         contactNumber: Joi.string().pattern(/^[0-9]{10}$/).required().messages(messages.contactNumber),
+        role : Joi.string().required()
     })
     return schema.validate(req, { abortEarly: false });
 }

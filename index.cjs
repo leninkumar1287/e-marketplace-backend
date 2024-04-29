@@ -1,25 +1,32 @@
 require('dotenv').config();
 const express = require('express');
-const { connectDb } = require('./src/services/connectDB.service.cjs');
 const { server } = require('./src/services/config.service.cjs');
 const { successFormat } = require('./src/services/utils/messageFormatter.cjs');
 const { StatusCodes } = require('http-status-codes');
 const router = require('./src/routes/index.cjs');
-const expressEndpoints = require('express-list-endpoints')
+const expressEndpoints = require('express-list-endpoints');
+const mongoose = require('mongoose');
 
 
 const application = express()
 application.use(express.json())
 try {
     //Invoking the DB Connection
-    connectDb()
+    mongoose.connect('mongodb://127.0.0.1:27017/test')
         .then((response) => {
-            if (response == 1) {
+            // console.log("response",response.connection.port)
+            if (response.connection) {
                 console.log(
                     "*************************************************************************************** \
             \nDB connection Status : ",
                     successFormat(
-                        response, "DB Connection",
+                        {
+                            database: response.connection.name,
+                            port: response.connection.port,
+                            connectionString: response.connection._connectionString,
+
+                        }
+                        , "DB Connection",
                         StatusCodes.ACCEPTED,
                         "DB Connected Successfully"))
                 //Running Express Server
