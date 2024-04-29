@@ -1,5 +1,7 @@
 const { MongoClient, ObjectId } = require('mongodb');
 const { dbCredentials, database } = require('./config.service.cjs');
+const { errorMsgFormat, successFormat } = require('./utils/messageFormatter.cjs');
+const { StatusCodes } = require('http-status-codes');
 
 // Connection URI
 const uri = `mongodb+srv://${dbCredentials.userName}:${dbCredentials.password}@${dbCredentials.appName}.y3evs0k.mongodb.net/?retryWrites=true&w=majority&appName=@${dbCredentials.appName}`;
@@ -7,14 +9,13 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 const dataBaseName = database.databaseName;
 const collectionName = database.collectionName;
 
-exports.findOne = async ( query ) => {
+exports.findOne = async (query) => {
     try {
         await client.connect();
         const database = client.db(dataBaseName);
         const collection = database.collection(collectionName);
-
         const result = await collection.findOne({ _id: new ObjectId(query) });
-        return result
+        if (result === null) return null; else return result
     } catch (error) {
         console.error('Error finding document:', error);
     } finally {
@@ -22,7 +23,55 @@ exports.findOne = async ( query ) => {
     }
 }
 
-exports.findMany = async ( query ) => {
+exports.findOneUsingQuery = async (query) => {
+    try {
+        await client.connect();
+        const database = client.db(dataBaseName);
+        const collection = database.collection(collectionName);
+        const result = await collection.findOne(query);
+        if (result === null) return null; else return result
+    } catch (error) {
+        console.error('Error finding document:', error);
+    } finally {
+        await client.close();
+    }
+}
+
+const checkDuplicate = async (query) => {
+    try {
+        await client.connect();
+        const database = client.db(dataBaseName);
+        const collection = database.collection(collectionName);
+        const result = await collection.findOne(query);
+        if (result === null) return true; else return false;
+    } catch (error) {
+        console.error('Error finding document:', error);
+    } finally {
+        await client.close();
+    }
+}
+
+async function checkingTheFields(data) {
+    let duplicateData = {};
+    for (const key in data) {
+        if (Object.hasOwnProperty.call(data, key) && key !== 'password' && key !== 'confirmPassword') {
+            console.log(`checking ${key}...\n`)
+            const query = { [key]: data[key] };
+            const isDuplicate = await checkDuplicate(query);
+            if (!isDuplicate) {
+                duplicateData.isExists = !isDuplicate ? false : true, // false mean duplicate found
+                    duplicateData.duplicateField = `${key}`
+                return duplicateData;
+            }
+            else console.log(`No Duplicate { ${key} : ${data[key]} } found, and is Valid too\n`)
+        }
+    }
+    duplicateData.isExists = true, // True means No Duplicate Found
+        duplicateData.duplicateField = null
+    return duplicateData; // Return true if no duplicates found
+}
+
+exports.findMany = async (query) => {
     try {
         await client.connect();
         const database = client.db(dataBaseName);
@@ -36,25 +85,32 @@ exports.findMany = async ( query ) => {
     }
 }
 
-exports.insertOne = async ( data ) => {
+exports.insertOne = async (data) => {
     try {
-        await client.connect();
         const database = client.db(dataBaseName);
         const collection = database.collection(collectionName);
+        let duplicateData = await checkingTheFields(data)
+        if (duplicateData.isExists) {
+            await client.connect();
+            const result = await collection.insertOne(data);
+            console.log(`Inserted document into the collection`);
+            return { result, duplicateData}
 
-        const result = await collection.insertOne(data);
-        console.log("result", result)
-        console.log(`Inserted document into the collection`);
-        return result
-        
+        }
+        else {
+            console.log("duplicate field", duplicateData.duplicateField)
+            return duplicateData;
+        }
+
     } catch (error) {
         console.error('Error saving data:', error);
+        return error
     } finally {
         await client.close();
     }
 }
 
-exports.insertMany = async ( data ) => {
+exports.insertMany = async (data) => {
     try {
         await client.connect();
         const database = client.db(dataBaseName);
@@ -69,7 +125,7 @@ exports.insertMany = async ( data ) => {
     }
 }
 
-exports.updateOne = async ( query, update ) => {
+exports.updateOne = async (query, update) => {
     try {
         await client.connect();
         const database = client.db(dataBaseName);
@@ -83,7 +139,7 @@ exports.updateOne = async ( query, update ) => {
     }
 }
 
-exports.updateMany = async ( query, update ) => {
+exports.updateMany = async (query, update) => {
     try {
         await client.connect();
         const database = client.db(dataBaseName);
@@ -98,7 +154,7 @@ exports.updateMany = async ( query, update ) => {
     }
 }
 
-exports.deleteOne = async ( query ) => {
+exports.deleteOne = async (query) => {
     try {
         await client.connect();
         const database = client.db(dataBaseName);
@@ -113,7 +169,7 @@ exports.deleteOne = async ( query ) => {
     }
 }
 
-exports.deleteMany = async ( query ) => {
+exports.deleteMany = async (query) => {
     try {
         await client.connect();
         const database = client.db(dataBaseName);
@@ -127,5 +183,3 @@ exports.deleteMany = async ( query ) => {
         await client.close();
     }
 }
-
-
