@@ -3,7 +3,7 @@ const { StatusCodes } = require('http-status-codes')
 const messageFormatter = require('../services/utils/messageFormatter.cjs')
 const { registration, signin, signout, changePassword, deleteProfile, sendOtp, resetPassword, resendOtp } = require('../controller/user.controller.cjs')
 
-exports.signup = async (req, res) => {
+const signup = async (req, res, next) => {
     try {
         let { error } = joiValidation.signup(req.body)
         if (error) {
@@ -14,6 +14,7 @@ exports.signup = async (req, res) => {
                     StatusCodes.BAD_REQUEST
                 ))
         }
+        next()
         return registration(req, res)
     } catch (error) {
         return res.status(StatusCodes.BAD_REQUEST)
@@ -25,7 +26,7 @@ exports.signup = async (req, res) => {
     }
 }
 
-exports.signin = async (req, res) => {
+const signIn = async (req, res) => {
     try {
         let { error } = joiValidation.signin(req.body)
         if (error) {
@@ -47,7 +48,7 @@ exports.signin = async (req, res) => {
     }
 }
 
-exports.signOut = (req, res) => {
+const signOut = (req, res) => {
     try {
         return signout(req, res)
     } catch (error) {
@@ -60,7 +61,7 @@ exports.signOut = (req, res) => {
     }
 }
 
-exports.changePwd = async (req, res) => {
+const changePwd = async (req, res) => {
     try {
         let { error } = joiValidation.changePassword(req.body)
         if (error) {
@@ -82,7 +83,7 @@ exports.changePwd = async (req, res) => {
     }
 }
 
-exports.sendOtp = (req, res) => {
+const otpSender = (req, res) => {
     try {
         let { error } = joiValidation.sendOtp(req.body)
         if (error) {
@@ -104,7 +105,7 @@ exports.sendOtp = (req, res) => {
     }
 }
 
-exports.reSendOtp = (req, res) => {
+const reSendOtp = (req, res) => {
     try {
         let { error } = joiValidation.reSendOtp(req.body)
         if (error) {
@@ -126,7 +127,7 @@ exports.reSendOtp = (req, res) => {
     }
 }
 
-exports.resetPassword = (req, res) => {
+const passwordReset = (req, res) => {
     try {
         console.log("req :",req.body)
         let { error } = joiValidation.resetPassword(req.body)
@@ -151,7 +152,7 @@ exports.resetPassword = (req, res) => {
 }
 
 
-exports.deleteUser = async (req, res) => {
+const deleteUser = async (req, res) => {
     try {
         let { error } = joiValidation.deleteUserProfile(req.body)
         if (error) {
@@ -171,4 +172,16 @@ exports.deleteUser = async (req, res) => {
                 StatusCodes.BAD_REQUEST
             ))
     }
+}
+
+module.exports = {
+    signup,
+    signIn,
+    signOut,
+    deleteUser,
+    changePwd,
+    otpSender,
+    reSendOtp,
+    passwordReset,
+
 }
