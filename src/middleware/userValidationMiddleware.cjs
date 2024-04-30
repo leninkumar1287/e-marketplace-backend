@@ -59,5 +59,3 @@ exports.signOut = (req, res) => {
             ))
     }
 }
-
-
