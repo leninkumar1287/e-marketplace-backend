@@ -14,6 +14,11 @@ exports.database = {
 exports.server = {
     portNumber: process.env.SERVER_PORT || 5000
 }
+// console.log("process.env.GOOGLESMTPAPP :",process.env.GOOGLESMTPAPP, process.env.FROMADDRESS)
+exports.gmailSmtpServer = {
+    password : process.env.GOOGLESMTPAPP,
+    from: process.env.FROMADDRESS,
+}
 
 exports.jwt = {
     jwtSecretKey: process.env.JWTSECRETKEY,

@@ -6,6 +6,7 @@ const { StatusCodes } = require('http-status-codes');
 const router = require('./src/routes/index.cjs');
 const expressEndpoints = require('express-list-endpoints');
 const mongoose = require('mongoose');
+const sendOTPVerification = require('./src/services/helper/otpSender.cjs')
 
 
 const application = express()
@@ -43,6 +44,7 @@ try {
                     console.log("\t\t\t\tAvailable Endpoint's")
                     const routes = expressEndpoints(application);
                     console.table(routes);
+                    // sendOTPVerification()
                 })
             }
         })

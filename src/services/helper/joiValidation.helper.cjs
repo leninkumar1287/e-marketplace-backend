@@ -8,8 +8,19 @@ const messages = {
         'string.max': 'Password must be at most {#limit} characters long',
         'any.required': 'Password is required',
     },
+    oldPassword: {
+        'string.alphanum': 'Password must only contain alphanumeric characters',
+        'any.required': 'Password is required',
+    },
+    newPassword : {
+        'string.alphanum': 'Password must only contain alphanumeric characters',
+        'string.min': 'Password must be at least {#limit} characters long',
+        'string.max': 'Password must be at most {#limit} characters long',
+        'any.required': 'password is required',
+        'string.disallow': 'Confirm password should not be same as old password'
+    },
     confirmPassword: {
-        'any.only': 'Passwords do not match',
+        'any.only': 'Confirm passwords do not match',
         'any.required': 'Confirm password is required',
     },
     emailId: {
@@ -26,6 +37,9 @@ const messages = {
     },
     contactNumber: {
         'string.pattern.base': 'Contact number must contain exactly 10 digits if only numbers are provided',
+    },
+    otp : {
+        'string.pattern.base': 'OTP number must contain exactly 4 digits, Only numbers will accept',
     }
 }
 
@@ -49,3 +63,46 @@ exports.signin = (req) => {
     })
     return schema.validate(req, { abortEarly: false });
 }
+
+exports.changePassword = (req) => {
+    let schema = Joi.object({
+        objectId: Joi.string().required(),
+        oldPassword: Joi.string().alphanum().required().messages(messages.oldPassword),
+        newPassword: Joi.string().alphanum().min(8).max(15).required().disallow(Joi.ref('oldPassword')).messages(messages.newPassword),
+        confirmPassword: Joi.any().valid(Joi.ref('newPassword')).required().messages(messages.confirmPassword),
+    })
+    return schema.validate(req, { abortEarly: false });
+}
+
+exports.sendOtp = (req) => {
+    let schema = Joi.object({
+        userEmail: Joi.string().email(({ minDomainSegments: 2, tlds: { allow: ['com', 'io'] } })).lowercase().required().messages(messages.emailId)
+    })
+    return schema.validate(req, { abortEarly: false });
+}
+
+exports.reSendOtp = (req) => {
+    let schema = Joi.object({
+        userEmail: Joi.string().email(({ minDomainSegments: 2, tlds: { allow: ['com', 'io'] } })).lowercase().required().messages(messages.emailId)
+    })
+    return schema.validate(req, { abortEarly: false });
+}
+
+exports.resetPassword = (req) => {
+    let schema = Joi.object({
+        userEmail: Joi.string().required(),
+        newPassword: Joi.string().alphanum().min(8).max(15).required().messages(messages.newPassword),
+        confirmPassword: Joi.any().valid(Joi.ref('newPassword')).required().messages(messages.confirmPassword),
+        otp: Joi.string().pattern(/^[0-9]{4}$/).required().messages(messages.otp),
+    })
+    return schema.validate(req, { abortEarly: false });
+}
+
+exports.deleteUserProfile = (req) => {
+    let schema = Joi.object({
+        objectId: Joi.string().required(),
+        password: Joi.string().alphanum().required().messages(messages.oldPassword),
+    })
+    return schema.validate(req, { abortEarly: false });
+}
+
