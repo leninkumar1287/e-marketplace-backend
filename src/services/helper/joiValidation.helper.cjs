@@ -58,7 +58,7 @@ exports.signup = (req) => {
 
 exports.signin = (req) => {
     let schema = Joi.object({
-        emailId: Joi.string().email(({ minDomainSegments: 2, tlds: { allow: ['com', 'io'] } })).lowercase().required().messages(messages.emailId),
+        userEmail: Joi.string().email(({ minDomainSegments: 2, tlds: { allow: ['com', 'io'] } })).lowercase().required().messages(messages.emailId),
         password: Joi.string().alphanum().min(8).max(15).required().messages(messages.password),
     })
     return schema.validate(req, { abortEarly: false });
@@ -66,7 +66,8 @@ exports.signin = (req) => {
 
 exports.changePassword = (req) => {
     let schema = Joi.object({
-        objectId: Joi.string().required(),
+        // objectId: Joi.string().required(),
+        userEmail: Joi.string().email(({ minDomainSegments: 2, tlds: { allow: ['com', 'io'] } })).lowercase().required().messages(messages.emailId),
         oldPassword: Joi.string().alphanum().required().messages(messages.oldPassword),
         newPassword: Joi.string().alphanum().min(8).max(15).required().disallow(Joi.ref('oldPassword')).messages(messages.newPassword),
         confirmPassword: Joi.any().valid(Joi.ref('newPassword')).required().messages(messages.confirmPassword),
@@ -90,7 +91,7 @@ exports.reSendOtp = (req) => {
 
 exports.resetPassword = (req) => {
     let schema = Joi.object({
-        userEmail: Joi.string().required(),
+        userEmail: Joi.string().email(({ minDomainSegments: 2, tlds: { allow: ['com', 'io'] } })).lowercase().required().messages(messages.emailId),
         newPassword: Joi.string().alphanum().min(8).max(15).required().messages(messages.newPassword),
         confirmPassword: Joi.any().valid(Joi.ref('newPassword')).required().messages(messages.confirmPassword),
         otp: Joi.string().pattern(/^[0-9]{4}$/).required().messages(messages.otp),
@@ -100,7 +101,7 @@ exports.resetPassword = (req) => {
 
 exports.deleteUserProfile = (req) => {
     let schema = Joi.object({
-        objectId: Joi.string().required(),
+        userEmail: Joi.string().email(({ minDomainSegments: 2, tlds: { allow: ['com', 'io'] } })).lowercase().required().messages(messages.emailId),
         password: Joi.string().alphanum().required().messages(messages.oldPassword),
     })
     return schema.validate(req, { abortEarly: false });

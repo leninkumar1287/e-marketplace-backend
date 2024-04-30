@@ -47,7 +47,7 @@ exports.registration = async (req, res) => {
 exports.signin = async (req, res) => {
     try {
         let request = req.body
-        let checkEmailIsRegistered = await UserModel.findOne({ userEmail: request.emailId })
+        let checkEmailIsRegistered = await UserModel.findOne({ userEmail: request.userEmail })
         console.log("checkEmailIsRegistered :", checkEmailIsRegistered)
         if (checkEmailIsRegistered) {
             //Decrypt the password 
@@ -55,9 +55,9 @@ exports.signin = async (req, res) => {
             if (Decrypt) {
                 let tokenPayload = {
                     id: checkEmailIsRegistered.id,
-                    emailId: checkEmailIsRegistered.emailId
+                    userEmail: checkEmailIsRegistered.userEmail
                 }
-                const jwtToken = jsonwebtoken.sign(tokenPayload, jwt.jwtSecretKey, { expiresIn: '30s' });
+                const jwtToken = jsonwebtoken.sign(tokenPayload, jwt.jwtSecretKey, { expiresIn: '30h' });
 
                 let responsePayload = {
                     userId: checkEmailIsRegistered.id,
@@ -99,18 +99,24 @@ exports.signout = async (req, res) => {
 exports.deleteProfile = async (request, response) => {
     try {
         const requestBody = request.body
-        let objectIdValidation = validateObjectId(requestBody.objectId)
-        if (objectIdValidation.error === false) {
-            let findUser = await UserModel.findById({ _id: requestBody.objectId })
-            if (findUser === null) return response.status(StatusCodes.NOT_FOUND).send(errorMsgFormat({ message: 'User Not Found' }, 'Delete User', StatusCodes.NOT_FOUND))
+        const { token } = request.headers
+        // let objectIdValidation = validateObjectId(requestBody.objectId)
+        // if (true) {
+
+        let findUser = await UserModel.findOne({ userEmail: requestBody.userEmail })
+        if (findUser === null) return response.status(StatusCodes.NOT_FOUND).send(errorMsgFormat({ message: 'User Not Found' }, 'Delete User', StatusCodes.NOT_FOUND))
+        if (!checkTokenIsBlacListed(token)) {
             let checkPassword = await bcrypt.compare(requestBody.password, findUser.password)
             if (checkPassword) {
-                let deleteUser = await UserModel.deleteOne({ _id: requestBody.objectId })
+                let deleteUser = await UserModel.deleteOne({ userEmail: requestBody.userEmail })
+                addBlackListedToken(token)
                 return response.status(StatusCodes.OK).send(successFormat(deleteUser, "Delete Profile", StatusCodes.OK, `${findUser.userName} User profile deleted successfully`))
             }
             else return response.status(StatusCodes.NOT_FOUND).send(errorMsgFormat({ message: `Wrong Password` }, 'Delete User', StatusCodes.NOT_FOUND))
         }
-        else return response.status(StatusCodes.NOT_FOUND).send(errorMsgFormat(objectIdValidation, 'Delete User', StatusCodes.NOT_FOUND))
+        else return response.status(StatusCodes.NOT_FOUND).send(errorMsgFormat("Token Invalid", 'Delete User', StatusCodes.NOT_FOUND))
+        // }
+        // else return response.status(StatusCodes.NOT_FOUND).send(errorMsgFormat(objectIdValidation, 'Delete User', StatusCodes.NOT_FOUND))
     } catch (error) {
         return response.status(StatusCodes.BAD_REQUEST).send(errorMsgFormat(error.message, "Delete Profile", StatusCodes.BAD_REQUEST))
     }
@@ -119,18 +125,23 @@ exports.deleteProfile = async (request, response) => {
 exports.changePassword = async (request, response) => {
     try {
         const requestBody = request.body;
-        let existingUser = await UserModel.findById({ _id: requestBody.objectId })
-        console.log("existingUser :", existingUser)
+        const { token } = request.headers
+
+        let existingUser = await UserModel.findOne({ userEmail: requestBody.userEmail })
         if (existingUser) {
-            let Decrypt = await new bcrypt.compare(requestBody.oldPassword, existingUser.password)
-            let encryptedNewPassword = await bcrypt.hash(requestBody.newPassword, 10);
-            if (Decrypt) {
-                let updatePassword = await UserModel.findOneAndUpdate({ _id: requestBody.objectId }, { password: encryptedNewPassword })
-                if (updatePassword) return response.status(StatusCodes.OK).send(successFormat(updatePassword, "Change Password", StatusCodes.OK, "password changed successfully"))
+            if (!checkTokenIsBlacListed(token)) {
+                let Decrypt = await new bcrypt.compare(requestBody.oldPassword, existingUser.password)
+                let encryptedNewPassword = await bcrypt.hash(requestBody.newPassword, 10);
+                if (Decrypt) {
+                    let updatePassword = await UserModel.findOneAndUpdate({ userEmail: requestBody.userEmail }, { password: encryptedNewPassword })
+                    if (updatePassword) return response.status(StatusCodes.OK).send(successFormat(updatePassword, "Change Password", StatusCodes.OK, "password changed successfully"))
+                }
+                else return response.status(StatusCodes.BAD_REQUEST).send(errorMsgFormat("Password Not Matched With Old Password", 'Change password', StatusCodes.BAD_REQUEST))
             }
-            else return response.status(StatusCodes.BAD_REQUEST).send(errorMsgFormat("Password Not Matched With Old Password", 'Change password', StatusCodes.BAD_REQUEST))
+            else return response.status(StatusCodes.NOT_FOUND).send(errorMsgFormat("Token Invalid", 'Delete User', StatusCodes.NOT_FOUND))
         }
         else return response.status(StatusCodes.BAD_REQUEST).send(errorMsgFormat("User Not Found", 'Change password', StatusCodes.BAD_REQUEST))
+
     } catch (error) {
         return response.status(StatusCodes.BAD_REQUEST).send(errorMsgFormat(error.message, 'Change password', StatusCodes.BAD_REQUEST))
     }
@@ -175,8 +186,11 @@ exports.resendOtp = async (request, response) => {
     try {
         const requestBody = request.body
         let checkResendTime = await OtpModel.findOne({ userEmail: requestBody.userEmail })
-        if (checkResendTime.resendAllowdTime < Date.now()) {
+        if (checkResendTime ? checkResendTime.resendAllowdTime < Date.now() : false) {
+            let user = await UserModel.findOne({ userEmail: requestBody.userEmail })
             let checkUserExists = await OtpModel.findOneAndDelete({ userEmail: requestBody.userEmail })
+            console.log(":checkUserExists :", checkUserExists)
+            checkUserExists.userName = user.userName;
             if (checkUserExists === null) throw new Error("Invalid Request")
             else {
                 let otpGenerator = await sendOTPforVerification(checkUserExists)
@@ -196,6 +210,7 @@ exports.resendOtp = async (request, response) => {
                 }
             }
         }
+        if (checkResendTime === null) throw new Error("Bad Request")
         return response.status(StatusCodes.METHOD_NOT_ALLOWED)
             .send(errorMsgFormat({ message: "Resent not allowed now, You can request after 30seconds from the previous request" }
                 , "Resend OTP",

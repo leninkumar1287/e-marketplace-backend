@@ -14,7 +14,6 @@ const signup = async (req, res, next) => {
                     StatusCodes.BAD_REQUEST
                 ))
         }
-        next()
         return registration(req, res)
     } catch (error) {
         return res.status(StatusCodes.BAD_REQUEST)
