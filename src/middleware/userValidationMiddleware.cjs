@@ -1,7 +1,18 @@
 const joiValidation = require('../services/helper/joiValidation.helper.cjs')
 const { StatusCodes } = require('http-status-codes')
 const messageFormatter = require('../services/utils/messageFormatter.cjs')
-const { registration, signin, signout, changePassword, deleteProfile, sendOtp, resetPassword, resendOtp } = require('../controller/user.controller.cjs')
+const { 
+    registration, 
+    signin, 
+    signout, 
+    changePassword, 
+    deleteProfile, 
+    sendOtp, 
+    resetPassword, 
+    resendOtp, 
+    updateProfile, 
+    viewProfile 
+} = require('../controller/user.controller.cjs')
 
 const signup = async (req, res, next) => {
     try {
@@ -128,9 +139,7 @@ const reSendOtp = (req, res) => {
 
 const passwordReset = (req, res) => {
     try {
-        console.log("req :",req.body)
         let { error } = joiValidation.resetPassword(req.body)
-        console.log("error : ",error)
         if (error) {
             return res.status(StatusCodes.BAD_REQUEST)
                 .send(messageFormatter.validationFormat(
@@ -173,6 +182,40 @@ const deleteUser = async (req, res) => {
     }
 }
 
+const updateUsrProfile = async (req, res) => {
+    try {
+        let { error } = joiValidation.updateProfile(req.body)
+        if (error) {
+            return res.status(StatusCodes.BAD_REQUEST)
+                .send(messageFormatter.validationFormat(
+                    error,
+                    'Update Profile',
+                    StatusCodes.BAD_REQUEST
+                ))
+        }
+        return updateProfile(req, res)
+    } catch (error) {
+        return res.status(StatusCodes.BAD_REQUEST)
+            .send(messageFormatter.errorMsgFormat(
+                error.message,
+                'Update Profile',
+                StatusCodes.BAD_REQUEST
+            ))
+    }
+}
+const getProfile = async (req, res) => {
+    try {
+        return viewProfile(req, res)
+    } catch (error) {
+        return res.status(StatusCodes.BAD_REQUEST)
+            .send(messageFormatter.errorMsgFormat(
+                error.message,
+                'Get Profile',
+                StatusCodes.BAD_REQUEST
+            ))
+    }
+}
+
 module.exports = {
     signup,
     signIn,
@@ -182,5 +225,6 @@ module.exports = {
     otpSender,
     reSendOtp,
     passwordReset,
-
+    updateUsrProfile,
+    getProfile
 }
